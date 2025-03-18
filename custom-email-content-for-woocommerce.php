@@ -109,7 +109,7 @@ function wecfw_content_for_email( $order, $sent_to_admin, $plain_text, $email ) 
 
 		if ( null !== $product->get_changes() ) {
 			$changes = $product->get_changes();
-			if ( 'Dummy Product' === $changes['name'] ) {
+			if ( isset( $changes['name'] ) && 'Dummy Product' === $changes['name'] ) {
 				$show_category_one_content = true;
 				$show_category_two_content = true;
 			}
