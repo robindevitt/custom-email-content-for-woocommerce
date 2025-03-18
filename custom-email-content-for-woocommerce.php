@@ -3,7 +3,7 @@
  * Plugin Name: Custom Email Content for WooCommerce
  * Plugin URI: https://github.com/robindevitt/custom-email-content-for-woocommerce
  * Description: Add custom email content too WooCommerce emails for specific categories.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Robin Devitt
  * Author URI: https://robindevitt.co.za/
  * License: GPL v3 or later
@@ -72,7 +72,6 @@ function wecfw_content_after_order_table( $order, $sent_to_admin, $plain_text, $
 	}
 }
 
-
 /**
  * Add content before the woocommerce order table in emails.
  *
@@ -107,11 +106,14 @@ function wecfw_content_for_email( $order, $sent_to_admin, $plain_text, $email ) 
 		if ( in_array( $wecfw_cat_two_selected, $categories, true ) ) {
 			$show_category_two_content = true;
 		}
-	}
 
-	if ( Automattic\WooCommerce\Utilities\FeaturesUtil::feature_is_enabled( 'email_improvements' ) ) {
-		$show_category_one_content = ( $wecfw_cat_one_selected ? true : false );
-		$show_category_two_content = ( $wecfw_cat_two_selected ? true : false );
+		if ( null !== $product->get_changes() ) {
+			$changes = $product->get_changes();
+			if ( 'Dummy Product' === $changes['name'] ) {
+				$show_category_one_content = true;
+				$show_category_two_content = true;
+			}
+		}
 	}
 
 	do_action( 'wecfw_add_additional_email_content_before' );
