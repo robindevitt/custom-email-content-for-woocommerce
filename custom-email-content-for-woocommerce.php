@@ -20,6 +20,8 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+require_once 'includes/wecfw-email-templates.php';
+
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'add_settings_link', 10 );
 add_filter( 'woocommerce_email_settings', 'wecfw_email_additional_settings' );
 add_filter( 'woocommerce_email_before_order_table', 'wecfw_content_before_order_table', 10, 4 );
@@ -53,8 +55,14 @@ function add_settings_link( $links ) {
 function wecfw_content_before_order_table( $order, $sent_to_admin, $plain_text, $email ) {
 	$wecfw_content_location = get_option( 'wecfw_content_location' );
 	if ( 'before_order_table' === $wecfw_content_location ) {
-		wecfw_content_for_email( $order, $sent_to_admin, $plain_text, $email );
+		wecfw_global_content_for_email( $order, $sent_to_admin, $plain_text, $email );
 	}
+
+	if ( 'before_order_table' === $email->get_option( 'wecfw_content_location' ) ) {
+		wecfw_global_content_for_email( $order, $sent_to_admin, $plain_text, $email, true );
+	}
+
+	do_action( 'wecfw_add_email_template_content_before', $order, $sent_to_admin, $plain_text, $email );
 }
 
 /**
@@ -66,33 +74,51 @@ function wecfw_content_before_order_table( $order, $sent_to_admin, $plain_text, 
  * @param WC_Email $email Email object.
  */
 function wecfw_content_after_order_table( $order, $sent_to_admin, $plain_text, $email ) {
+	do_action( 'wecfw_add_email_template_content_after', $order, $sent_to_admin, $plain_text, $email );
 	$wecfw_content_location = get_option( 'wecfw_content_location' );
 	if ( 'after_order_table' === $wecfw_content_location ) {
-		wecfw_content_for_email( $order, $sent_to_admin, $plain_text, $email );
+		wecfw_global_content_for_email( $order, $sent_to_admin, $plain_text, $email );
+	}
+
+	if ( 'after_order_table' === $email->get_option( 'wecfw_content_location' ) ) {
+		wecfw_global_content_for_email( $order, $sent_to_admin, $plain_text, $email, true );
 	}
 }
 
 /**
- * Add content before the woocommerce order table in emails.
+ * Add global content before the woocommerce order table in emails.
  *
  * @param WC_Order $order Order object.
  * @param bool     $sent_to_admin Whether it's sent to admin or customer.
  * @param bool     $plain_text Whether it's a plain text email.
  * @param WC_Email $email Email object.
+ * @param bool     $template Whether it's a template or not.
  */
-function wecfw_content_for_email( $order, $sent_to_admin, $plain_text, $email ) {
+function wecfw_global_content_for_email( $order, $sent_to_admin, $plain_text, $email, $template = false ) {
 
-	$wecfw_enabled_emails = get_option( 'wecfw_enabled_emails' );
+	if ( $template ) {
 
-	if ( ! in_array( get_class( $email ), $wecfw_enabled_emails, true ) ) {
-		return;
+		$wecfw_cat_one_selected = $email->get_option( 'wecfw_cat_one' );
+		$wecfw_cat_two_selected = $email->get_option( 'wecfw_cat_two' );
+		$wecfw_cat_one_content  = $email->get_option( 'wecfw_cat_one_content' );
+		$wecfw_cat_two_content  = $email->get_option( 'wecfw_cat_two_content' );
+
+	} else {
+
+		$wecfw_enabled_emails = get_option( 'wecfw_enabled_emails' );
+
+		if ( ! in_array( get_class( $email ), $wecfw_enabled_emails, true ) ) {
+			return;
+		}
+
+		$wecfw_cat_one_selected = get_option( 'wecfw_cat_one' );
+		$wecfw_cat_two_selected = get_option( 'wecfw_cat_two' );
+		$wecfw_cat_one_content  = get_option( 'wecfw_cat_one_content' );
+		$wecfw_cat_two_content  = get_option( 'wecfw_cat_two_content' );
 	}
 
 	$show_category_one_content = false;
 	$show_category_two_content = false;
-
-	$wecfw_cat_one_selected = get_option( 'wecfw_cat_one' );
-	$wecfw_cat_two_selected = get_option( 'wecfw_cat_two' );
 
 	foreach ( $order->get_items() as $item ) {
 
@@ -116,14 +142,14 @@ function wecfw_content_for_email( $order, $sent_to_admin, $plain_text, $email ) 
 		}
 	}
 
-	do_action( 'wecfw_add_additional_email_content_before' );
+	do_action( 'wecfw_add_additional_email_content_before', $order, $sent_to_admin, $plain_text, $email );
 
 	if ( $show_category_one_content ) {
-		echo wp_kses_post( get_option( 'wecfw_cat_one_content' ) );
+		echo wp_kses_post( $wecfw_cat_one_content );
 	}
 
 	if ( $show_category_two_content ) {
-		echo wp_kses_post( get_option( 'wecfw_cat_two_content' ) );
+		echo wp_kses_post( $wecfw_cat_two_content );
 	}
 
 	do_action( 'wecfw_add_additional_email_content_after' );
@@ -148,14 +174,14 @@ function wecfw_email_additional_settings( $settings ) {
 
 	// Add the settings section title.
 	$settings[] = array(
-		'title' => __( 'Category Email Content', 'custom-email-content-for-woocommerce' ),
+		'title' => __( 'Global category email content', 'custom-email-content-for-woocommerce' ),
 		'type'  => 'title',
 		'id'    => 'custom_email_options',
 	);
 
 	// Add the selection of which emails this is added too.
 	$settings[] = array(
-		'title'    => __( 'Email Select', 'custom-email-content-for-woocommerce' ),
+		'title'    => __( 'Email select', 'custom-email-content-for-woocommerce' ),
 		'id'       => 'wecfw_enabled_emails',
 		'desc_tip' => 'Select which emails should included the category content.',
 		'type'     => 'multiselect',
@@ -165,15 +191,15 @@ function wecfw_email_additional_settings( $settings ) {
 
 	// Add the selection of where the content should show.
 	$settings[] = array(
-		'title'    => __( 'Content Location', 'custom-email-content-for-woocommerce' ),
+		'title'    => __( 'Content location', 'custom-email-content-for-woocommerce' ),
 		'id'       => 'wecfw_content_location',
 		'desc_tip' => 'Select where the content should show.',
 		'type'     => 'select',
 		'class'    => 'wc-enhanced-select',
 		'options'  => array(
-			''                   => __( 'Don\'t Display', 'custom-email-content-for-woocommerce' ),
-			'before_order_table' => __( 'Before Order Table', 'custom-email-content-for-woocommerce' ),
-			'after_order_table'  => __( 'After Order Table', 'custom-email-content-for-woocommerce' ),
+			''                   => __( 'Don\'t display', 'custom-email-content-for-woocommerce' ),
+			'before_order_table' => __( 'Before order table', 'custom-email-content-for-woocommerce' ),
+			'after_order_table'  => __( 'After order table', 'custom-email-content-for-woocommerce' ),
 		),
 	);
 
@@ -191,11 +217,11 @@ function wecfw_email_additional_settings( $settings ) {
 	foreach ( $terms as $term ) {
 		$category_options[ $term->slug ] = ( 0 === $term->parent ? '' : '- ' ) . $term->name;
 	}
-	$category_options[''] = __( 'Disable Custom Content', 'custom-email-content-for-woocommerce' );
+	$category_options[''] = __( 'Disable custom content', 'custom-email-content-for-woocommerce' );
 
 	// Add the selection of category one.
 	$settings[] = array(
-		'title'    => __( 'Category One Select', 'custom-email-content-for-woocommerce' ),
+		'title'    => __( 'Category one select', 'custom-email-content-for-woocommerce' ),
 		'id'       => 'wecfw_cat_one',
 		'desc_tip' => '',
 		'default'  => '',
@@ -207,7 +233,7 @@ function wecfw_email_additional_settings( $settings ) {
 
 	// Add the selection of category one content.
 	$settings[] = array(
-		'title'    => __( 'Category One HTML Content', 'custom-email-content-for-woocommerce' ),
+		'title'    => __( 'Category one HTML content', 'custom-email-content-for-woocommerce' ),
 		'id'       => 'wecfw_cat_one_content',
 		'type'     => 'textarea',
 		'class'    => 'large',
@@ -217,7 +243,7 @@ function wecfw_email_additional_settings( $settings ) {
 
 	// Add the selection of category two.
 	$settings[] = array(
-		'title'    => __( 'Category Two Select', 'custom-email-content-for-woocommerce' ),
+		'title'    => __( 'Category two select', 'custom-email-content-for-woocommerce' ),
 		'id'       => 'wecfw_cat_two',
 		'desc_tip' => '',
 		'default'  => '',
@@ -229,7 +255,7 @@ function wecfw_email_additional_settings( $settings ) {
 
 	// Add the selection of category two content.
 	$settings[] = array(
-		'title'    => __( 'Category Two HTML Content', 'custom-email-content-for-woocommerce' ),
+		'title'    => __( 'Category two HTML content', 'custom-email-content-for-woocommerce' ),
 		'id'       => 'wecfw_cat_two_content',
 		'type'     => 'textarea',
 		'desc_tip' => __( 'Add custom HTML content here.', 'custom-email-content-for-woocommerce' ),
