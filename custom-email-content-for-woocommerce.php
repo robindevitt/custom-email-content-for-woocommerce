@@ -24,8 +24,10 @@ require_once 'includes/wecfw-email-templates.php';
 
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'add_settings_link', 10 );
 add_filter( 'woocommerce_email_settings', 'wecfw_email_additional_settings' );
-add_filter( 'woocommerce_email_before_order_table', 'wecfw_content_before_order_table', 10, 4 );
+add_filter( 'woocommerce_email_order_details', 'wecfw_content_before_order_table', 1, 4 );
 add_filter( 'woocommerce_email_after_order_table', 'wecfw_content_after_order_table', 10, 4 );
+add_filter( 'woocommerce_email_styles', 'wecfw_add_css_to_emails', 9999, 2 );
+
 
 /**
  * Add a settings link to the plugin page.
@@ -270,4 +272,15 @@ function wecfw_email_additional_settings( $settings ) {
 		'id'   => 'custom_email_options',
 	);
 	return $settings;
+}
+
+/**
+ * Custom Email CSS.
+ *
+ * @param string   $css The CSS to be added.
+ * @param WC_Email $email The email object.
+ */
+function wecfw_add_css_to_emails( $css, $email ) {
+	$css .= '.email-introduction{padding-bottom:0px;}';
+	return $css;
 }
