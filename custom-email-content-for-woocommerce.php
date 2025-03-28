@@ -3,7 +3,7 @@
  * Plugin Name: Custom Email Content for WooCommerce
  * Plugin URI: https://github.com/robindevitt/custom-email-content-for-woocommerce
  * Description: Add custom email content too WooCommerce emails for specific categories.
- * Version: 1.1.0
+ * Version: 1.1.1
  * Author: Robin Devitt
  * Author URI: https://robindevitt.co.za/
  * License: GPL v3 or later
